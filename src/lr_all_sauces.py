@@ -30,17 +30,22 @@ df = pd.read_csv(DATA_PATH)
 df["data_bon"] = pd.to_datetime(df["data_bon"])
 
 # =========================
-# 2. IDENTIFY SAUCES
+# 2. IDENTIFY STANDALONE SAUCES (per requirements)
 # =========================
-def get_sauces(df):
-    keywords = ["sauce", "sos", "dressing"]
-    return [
-        p for p in df["retail_product_name"].unique()
-        if any(k in p.lower() for k in keywords)
-    ]
+# Only standalone sauces (not compound products like "Fries with Sauce")
+sauces = [
+    "Crazy Sauce",
+    "Cheddar Sauce",
+    "Extra Cheddar Sauce",
+    "Garlic Sauce",
+    "Tomato Sauce",
+    "Blueberry Sauce",
+    "Spicy Sauce",
+    "Pink Sauce"
+]
 
-sauces = get_sauces(df)
-print(f"Sauces found: {sauces}")
+print(f"Standalone sauces (per requirements): {len(sauces)} sauces")
+print(f"  {sauces}")
 
 # =========================
 # 3. TRAIN / TEST SPLIT (BON LEVEL)
@@ -131,7 +136,17 @@ for sauce in sauces:
     print(f"    Top features: {list(top_coef['Feature'])}")
 
 # =========================
-# 6. TOP-K RECOMMENDATION
+# 6. CACHE TEST FEATURES (PERFORMANCE OPTIMIZATION)
+# =========================
+print("\nCaching test features for fast evaluation...")
+X_test_cache = {}
+for sauce in sauces:
+    X_test, _ = build_dataset_for_sauce(df_test, sauce)
+    X_test_cache[sauce] = X_test
+    print(f"  Cached features for {sauce}")
+
+# =========================
+# 7. TOP-K RECOMMENDATION
 # =========================
 def recommend_top_k(bon_id, basket_df, sauces, K):
     scores = {}
@@ -140,11 +155,14 @@ def recommend_top_k(bon_id, basket_df, sauces, K):
         if sauce in basket_df["retail_product_name"].values:
             continue
 
-        X, _ = build_dataset_for_sauce(df_test, sauce)
+        X = X_test_cache[sauce]
         if bon_id not in X.index:
             continue
 
-        x = X.loc[[bon_id], feature_names[sauce]]
+        # Get features for this basket, ensure column order matches training
+        x = X.loc[[bon_id]]
+        # Reindex to match feature_names order, filling missing columns with 0
+        x = x.reindex(columns=feature_names[sauce], fill_value=0)
         x_scaled = scalers[sauce].transform(x)
 
         prob = models[sauce].predict_proba(x_scaled)[0, 1]
@@ -153,9 +171,12 @@ def recommend_top_k(bon_id, basket_df, sauces, K):
     return sorted(scores, key=scores.get, reverse=True)[:K]
 
 # =========================
-# 7. HIT@K EVALUATION
+# 8. HIT@K AND PRECISION@K EVALUATION
 # =========================
 def hit_at_k(df_test, sauces, K):
+    """
+    Hit@K: % of instances where the real sauce appears in Top-K recommendations
+    """
     hits = 0
     total = 0
 
@@ -177,8 +198,38 @@ def hit_at_k(df_test, sauces, K):
 
     return hits / total if total > 0 else 0
 
+def precision_at_k(df_test, sauces, K):
+    """
+    Precision@K: average proportion of relevant items in Top-K recommendations
+    """
+    precisions = []
+
+    for bon_id, basket in df_test.groupby("id_bon"):
+        real_sauces = set([
+            s for s in sauces
+            if s in basket["retail_product_name"].values
+        ])
+
+        if not real_sauces:
+            continue
+
+        # For each real sauce, remove it and recommend
+        for real_sauce in real_sauces:
+            basket_wo = basket[basket["retail_product_name"] != real_sauce]
+            if basket_wo.empty:
+                continue
+
+            top_k = recommend_top_k(bon_id, basket_wo, sauces, K)
+            
+            # Count how many real sauces are in top_k
+            relevant_in_topk = len([s for s in top_k if s in real_sauces])
+            precision = relevant_in_topk / K if K > 0 else 0
+            precisions.append(precision)
+
+    return np.mean(precisions) if precisions else 0
+
 # =========================
-# 8. POPULARITY BASELINE
+# 9. POPULARITY BASELINE
 # =========================
 def popularity_baseline(df_train, sauces, K):
     counts = {
@@ -187,14 +238,8 @@ def popularity_baseline(df_train, sauces, K):
     }
     return sorted(counts, key=counts.get, reverse=True)[:K]
 
-# =========================
-# 9. RUN EVALUATION
-# =========================
-hit_model = hit_at_k(df_test, sauces, TOP_K)
-
-popular_top_k = popularity_baseline(df_train, sauces, TOP_K)
-
 def hit_at_k_baseline(df_test, popular_top_k, sauces):
+    """Hit@K for popularity baseline"""
     hits = 0
     total = 0
 
@@ -209,19 +254,35 @@ def hit_at_k_baseline(df_test, popular_top_k, sauces):
 
     return hits / total if total > 0 else 0
 
-hit_baseline = hit_at_k_baseline(df_test, popular_top_k, sauces)
+# =========================
+# 10. RUN EVALUATION FOR MULTIPLE K VALUES
+# =========================
+K_VALUES = [1, 3, 5]
 
 print("\n================ RESULTS ================")
-print(f"Hit@{TOP_K} (LR models):     {hit_model:.2%}")
-print(f"Hit@{TOP_K} (Popularity):   {hit_baseline:.2%}")
-print("========================================")
+print("Logistic Regression Models:")
+print("-" * 50)
+for K in K_VALUES:
+    hit_model = hit_at_k(df_test, sauces, K)
+    prec_model = precision_at_k(df_test, sauces, K)
+    print(f"K={K}:  Hit@{K} = {hit_model:.2%}  |  Precision@{K} = {prec_model:.4f}")
+
+print("\n" + "=" * 50)
+print("Popularity Baseline:")
+print("-" * 50)
+for K in K_VALUES:
+    popular_top_k = popularity_baseline(df_train, sauces, K)
+    hit_baseline = hit_at_k_baseline(df_test, popular_top_k, sauces)
+    print(f"K={K}:  Hit@{K} = {hit_baseline:.2%}")
+
+print("=" * 50)
 
 # =========================
-# 10. EXAMPLE RECOMMENDATION
+# 11. EXAMPLE RECOMMENDATION
 # =========================
 for bon_id, basket in df_test.groupby("id_bon"):
     if not any(s in basket["retail_product_name"].values for s in sauces):
-        recs = recommend_top_k(bon_id, basket, sauces, TOP_K)
+        recs = recommend_top_k(bon_id, basket, sauces, 3)
         print(f"\nExample recommendation for basket {bon_id}:")
         print(recs)
         break

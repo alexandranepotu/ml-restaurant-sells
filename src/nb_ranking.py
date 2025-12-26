@@ -15,7 +15,7 @@ from sklearn.model_selection import train_test_split
 DATA_PATH = "data/ap_dataset.csv"
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
-TOP_K = 3
+K_VALUES = [1, 3, 5]  # Multiple K values for evaluation
 
 # PRODUSE CANDIDATE (UPSHELL) – DEFINITE EXPLICIT
 CANDIDATES = [
@@ -220,21 +220,29 @@ def hit_at_k_baseline(df_test, popular_top_k):
 # =========================
 # RUN EVALUATION
 # =========================
-hit_nb = hit_at_k(df_test, TOP_K)
-popular_top_k = popularity_baseline(df_train, TOP_K)
-hit_pop = hit_at_k_baseline(df_test, popular_top_k)
-
 print("\n================ RESULTS ================")
-print(f"Hit@{TOP_K} (Naive Bayes Ranking): {hit_nb:.2%}")
-print(f"Hit@{TOP_K} (Popularity):         {hit_pop:.2%}")
-print("========================================")
+print("Naive Bayes Ranking:")
+print("-" * 50)
+for K in K_VALUES:
+    hit_nb = hit_at_k(df_test, K)
+    print(f"K={K}:  Hit@{K} = {hit_nb:.2%}")
+
+print("\n" + "=" * 50)
+print("Popularity Baseline:")
+print("-" * 50)
+for K in K_VALUES:
+    popular_top_k = popularity_baseline(df_train, K)
+    hit_pop = hit_at_k_baseline(df_test, popular_top_k)
+    print(f"K={K}:  Hit@{K} = {hit_pop:.2%}")
+
+print("=" * 50)
 
 # =========================
 # EXAMPLE RANKING
 # =========================
 for bon_id, basket in df_test.groupby("id_bon"):
     if not any(p in basket["retail_product_name"].values for p in CANDIDATES):
-        ranking = rank_products(bon_id, basket, TOP_K)
+        ranking = rank_products(bon_id, basket, 3)
         print(f"\nExample ranking for basket {bon_id}:")
         print(ranking)
         break

@@ -43,8 +43,11 @@ ml-restaurant-sells/
 │   ├── load_data.py            # Încărcare și explorare date
 │   ├── build_baskets.py        # Reconstrucția coșurilor
 │   ├── build_features.py       # Feature engineering
-│   └── lr_crazy_sauce.py       # LR #1: Predicția sosurilor
+│   ├── lr_crazy_sauce.py       # LR #1: Predicția Crazy Sauce
+│   ├── lr_all_sauces.py        # LR #2: Recomandare multi-sos
+│   └── nb_ranking.py           # Ranking pentru upselling
 ├── requirements.txt
+├── raport.tex                   # Raport LaTeX complet
 └── README.md
 ```
 
@@ -143,12 +146,19 @@ python src/lr_all_sauces.py
 
 **Exemplu output:**
 ```
-Hit@3 (LR models):     78.12%
-Hit@3 (Popularity):    65.34%
+K=1:  Hit@1 = 96.51%  |  Precision@1 = 0.9651
+K=3:  Hit@3 = 100.00% |  Precision@3 = 0.4236
+K=5:  Hit@5 = 100.00% |  Precision@5 = 0.2927
+
+Popularitate:
+K=1:  Hit@1 = 45.76%
+K=3:  Hit@3 = 71.08%
+K=5:  Hit@5 = 86.44%
 ```
 
 **Observații cheie:**
-- Modelele LR personalizează recomandarea pe conținutul coșului, depășind baseline-ul de popularitate
+- Modelele LR personalizează recomandarea pe conținutul coșului, depășind baseline-ul de popularitate cu 29%
+- Acuratețe perfectă (100%) pentru Top-3: modelele au învățat pattern-uri foarte clare între produse și sosuri
 - Analiza coeficienților arată ce produse cresc/scad probabilitatea de a cumpăra fiecare sos
 
 
@@ -178,10 +188,16 @@ python src/nb_ranking.py
 
 **Exemplu output:**
 ```
-Hit@3 (Naive Bayes Ranking): 84.57%
-Hit@3 (Popularity):         71.08%
+K=1:  Hit@1 = 54.23%
+K=3:  Hit@3 = 84.57%
+K=5:  Hit@5 = 94.11%
 
-Example NB recommendation for basket 12345:
+Popularitate:
+K=1:  Hit@1 = 32.31%
+K=3:  Hit@3 = 71.08%
+K=5:  Hit@5 = 93.54%
+
+Example ranking for basket 35222:
 ['Crazy Sauce', 'Cheddar Sauce', 'Garlic Sauce']
 ```
 
@@ -203,7 +219,29 @@ python src/build_features.py
 
 # 4. Rulare LR #1
 python src/lr_crazy_sauce.py
+
+# 5. Rulare LR #2
+python src/lr_all_sauces.py
+
+# 6. Rulare Ranking
+python src/nb_ranking.py
 ```
+
+## Raport LaTeX
+
+Raportul complet al proiectului este disponibil în `raport.tex`. Pentru a genera PDF-ul:
+
+```bash
+pdflatex raport.tex
+pdflatex raport.tex  # A doua rulare pentru referințe corecte
+```
+
+Raportul include:
+- Descrierea dataset-ului și preprocesare
+- Justificarea algoritmilor (teoretică și experimentală)
+- Rezultate documentate cu grafice (ROC curves, confusion matrices, top-K metrics)
+- Analiză coeficienți și interpretare pattern-uri
+- Concluzii și direcții de îmbunătățire
 
 ## Note
 - Dataset-ul este pentru uz didactic
