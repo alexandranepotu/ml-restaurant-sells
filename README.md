@@ -153,8 +153,41 @@ Hit@3 (Popularity):    65.34%
 
 
 
-### Ranking pentru Upselling (Planificat)
-Score(p | coș) = P(p | coș) × price(p) folosind Naive Bayes/k-NN/ID3/AdaBoost.
+
+### Ranking pentru Upselling cu Naive Bayes (Implementat ✓)
+
+**Cerința 3:** Pentru un coș parțial și un context fix, se produce o ierarhie (ranking) de produse candidate pentru “upsell”, în funcție de venitul și popularitatea aferente acestora.
+
+**Implementare:**
+- S-a implementat un sistem de ranking folosind Naive Bayes (BernoulliNB) pentru a estima probabilitatea P(p | coș) pentru fiecare produs candidat (ex: sosuri).
+- Scorul de ranking folosit: `Score(p | coș) = P(p | coș) × price(p)` (valoare așteptată maximă).
+- Pentru fiecare produs, se antrenează un model BernoulliNB (scikit-learn) pe coșuri, folosind count encoding binar pentru produse și trăsături de coș.
+- Pentru un coș dat, se exclud produsele deja prezente și se recomandă Top-K produse cu scorul cel mai mare.
+- Evaluare Hit@K: cât de des produsul eliminat din coș este recuperat de algoritm în Top-K recomandări.
+- Comparare cu baseline de popularitate și logistic regression.
+
+**Script:** `src/nb_ranking.py`
+
+```powershell
+python src/nb_ranking.py
+```
+
+**Rezultate generate:**
+- Hit@K (Naive Bayes): Procentul de bonuri pentru care produsul real eliminat a fost recomandat în Top-K
+- Exemplu de recomandare pentru un coș parțial
+
+**Exemplu output:**
+```
+Hit@3 (Naive Bayes Ranking): 84.57%
+Hit@3 (Popularity):         71.08%
+
+Example NB recommendation for basket 12345:
+['Crazy Sauce', 'Cheddar Sauce', 'Garlic Sauce']
+```
+
+**Observații cheie:**
+- Naive Bayes permite ranking rapid și scalabil pentru orice subset de produse candidate
+- Integrarea prețului în scor maximizează valoarea așteptată a recomandărilor
 
 ## Rularea Pipeline-ului Complet
 
