@@ -116,8 +116,42 @@ python src/lr_crazy_sauce.py
 **Rezultate generate:**
 - `output/lr_crazy_sauce_results.png` - Curba de antrenare, comparație ROC, matrice de confuzie, analiză coeficienți
 
-### LR #2: Recomandare Multi-Sosuri (Planificat)
-Antrenarea câte unui model LR pentru fiecare sos, recomandare Top-K sosuri pentru coș.
+
+### LR #2: Multi-Sauce Recommendation (Implementat ✓)
+
+**Problemă:** Pentru fiecare sos din listă, se antrenează un model de regresie logistică care prezice dacă sosul respectiv va fi cumpărat pe un bon (y_s = 1 dacă s apare în bon, altfel 0). Pentru un coș dat (fără sosuri), se calculează P(s | coș) pentru fiecare sos și se recomandă Top-K sosuri cu probabilitatea cea mai mare (care nu sunt deja în coș).
+
+**Implementare:**
+- Un model Logistic Regression (scikit-learn) pentru fiecare sos
+- Trăsături: count encoding pentru produse (excluzând sosul curent), cart_size, distinct_products, total_value, day_of_week, is_weekend
+- Împărțire train/test la nivel de bon
+- Recomandare Top-K sosuri pentru fiecare coș
+- Evaluare Hit@K: cât de des sosul real din bon apare în Top-K recomandări
+- Comparare cu baseline de popularitate globală (cele mai populare sosuri)
+- Vizualizare coeficienți (importanța trăsăturilor) pentru fiecare model de sos (salvate în `output/lr2_top_features_[nume_sos].png`)
+
+**Script:** `src/lr_all_sauces.py`
+
+```powershell
+python src/lr_all_sauces.py
+```
+
+**Rezultate generate:**
+- Hit@K (LR models): Procentul de bonuri pentru care cel puțin un sos real a fost recomandat în Top-K
+- Hit@K (Popularitate): Procentul de bonuri pentru care cel puțin un sos real se află în Top-K cele mai populare sosuri
+- `output/lr2_top_features_[nume_sos].png` - Top 15 coeficienți pentru fiecare model de sos
+
+**Exemplu output:**
+```
+Hit@3 (LR models):     78.12%
+Hit@3 (Popularity):    65.34%
+```
+
+**Observații cheie:**
+- Modelele LR personalizează recomandarea pe conținutul coșului, depășind baseline-ul de popularitate
+- Analiza coeficienților arată ce produse cresc/scad probabilitatea de a cumpăra fiecare sos
+
+
 
 ### Ranking pentru Upselling (Planificat)
 Score(p | coș) = P(p | coș) × price(p) folosind Naive Bayes/k-NN/ID3/AdaBoost.
