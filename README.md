@@ -164,19 +164,23 @@ K=5:  Hit@5 = 86.44%
 
 
 
-### Ranking pentru Upselling cu Naive Bayes (Implementat ✓)
+### Ranking pentru Upselling - Comparație Algoritmi (Implementat ✓)
 
 **Cerința 3:** Pentru un coș parțial și un context fix, se produce o ierarhie (ranking) de produse candidate pentru “upsell”, în funcție de venitul și popularitatea aferente acestora.
 
 **Implementare:**
-- S-a implementat un sistem de ranking folosind Naive Bayes (BernoulliNB) pentru a estima probabilitatea P(p | coș) pentru fiecare produs candidat (ex: sosuri).
-- Scorul de ranking folosit: `Score(p | coș) = P(p | coș) × price(p)` (valoare așteptată maximă).
-- Pentru fiecare produs, se antrenează un model BernoulliNB (scikit-learn) pe coșuri, folosind count encoding binar pentru produse și trăsături de coș.
-- Pentru un coș dat, se exclud produsele deja prezente și se recomandă Top-K produse cu scorul cel mai mare.
-- Evaluare Hit@K: cât de des produsul eliminat din coș este recuperat de algoritm în Top-K recomandări.
-- Comparare cu baseline de popularitate și logistic regression.
+- S-a implementat un sistem de ranking folosind 4 algoritmi: **Naive Bayes (custom)**, **k-NN**, **Decision Tree (ID3)**, și **AdaBoost**.
+- **Naive Bayes**: Implementare custom (from scratch) cu Bernoulli NB și Laplace smoothing, folosind trăsături binare.
+- **k-NN**: KNeighborsClassifier (sklearn) cu k=3, metric euclidian.
+- **Decision Tree**: DecisionTreeClassifier (sklearn) cu criterion='entropy' (ID3-like), max_depth=10.
+- **AdaBoost**: AdaBoostClassifier (sklearn) cu 50 estimatori, base estimator = Decision Tree.
+- Toate folosesc aceeași formulă de scoring: `Score(p | coș) = P(p | coș) × price(p)` (valoare așteptată maximă).
+- Evaluare Hit@K (K=1,3,5): cât de des produsul eliminat din coș este recuperat în Top-K.
+- Comparare cu baseline de popularitate.
 
-**Script:** `src/nb_ranking.py`
+**Scripturi:**
+- `src/nb_ranking.py` - Implementare custom Naive Bayes
+- `src/ranking_comparison.py` - Comparație completă a tuturor algoritmilor
 
 ```powershell
 python src/nb_ranking.py
@@ -186,24 +190,37 @@ python src/nb_ranking.py
 - Hit@K (Naive Bayes): Procentul de bonuri pentru care produsul real eliminat a fost recomandat în Top-K
 - Exemplu de recomandare pentru un coș parțial
 
-**Exemplu output:**
+**Rezultate comparative (Hit@K):**
 ```
-K=1:  Hit@1 = 54.23%
-K=3:  Hit@3 = 84.57%
-K=5:  Hit@5 = 94.11%
+               NaiveBayes    k-NN    DecisionTree    AdaBoost    Popularity
+Hit@1             54.23%   49.30%         79.53%      67.31%        32.31%
+Hit@3             84.57%   76.96%         92.60%      80.06%        71.08%
+Hit@5             94.11%   92.18%         97.21%      97.43%        93.54%
 
-Popularitate:
-K=1:  Hit@1 = 32.31%
-K=3:  Hit@3 = 71.08%
-K=5:  Hit@5 = 93.54%
-
-Example ranking for basket 35222:
-['Crazy Sauce', 'Cheddar Sauce', 'Garlic Sauce']
+Medie Hit@K:      77.63%   72.81%         89.78%      81.60%        65.64%
 ```
 
 **Observații cheie:**
-- Naive Bayes permite ranking rapid și scalabil pentru orice subset de produse candidate
-- Integrarea prețului în scor maximizează valoarea așteptată a recomandărilor
+- **Decision Tree (ID3)** are cele mai bune performanțe generale (89.78% medie Hit@K)
+- **AdaBoost** excelează la K=5 (97.43%), aproape perfect
+- **Naive Bayes custom** este competitiv (77.63%), validând implementarea proprie
+- **k-NN** performează slab datorită dimensionalității înalte (curse of dimensionality)
+- **Toate algoritmii** depășesc semnificativ baseline-ul de popularitate
+- Decision Tree capturează relații non-liniare complexe între produse
+
+**Vizualizări generate:** `output/ranking_comparison_all.png`, `output/ranking_heatmap.png`
+
+**Exemplu ranking pentru coșul 35222:**
+```
+Produse în coș: ['Crazy Schnitzel', 'Breaded Chicken Schnitzel', 'Pepsi Twist Zero Can 0.33L']
+
+Top-3 Recomandări:
+  Naive Bayes:    ['Crazy Sauce', 'Cheddar Sauce', 'Garlic Sauce']
+  k-NN:           ['Blueberry Sauce', 'Crazy Sauce', 'Cheddar Sauce']
+  Decision Tree:  ['Blueberry Sauce', 'Crazy Sauce', 'Cheddar Sauce']
+  AdaBoost:       ['Crazy Sauce', 'Blueberry Sauce', 'Spicy Sauce']
+  Popularity:     ['Crazy Sauce', 'Cheddar Sauce', 'Garlic Sauce']
+```
 
 ## Rularea Pipeline-ului Complet
 
