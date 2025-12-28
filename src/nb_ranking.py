@@ -10,12 +10,14 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 
 # =========================
+
 # CONFIG
 # =========================
 DATA_PATH = "data/ap_dataset.csv"
 TEST_SIZE = 0.2
 RANDOM_STATE = 42
 K_VALUES = [1, 3, 5]  # Multiple K values for evaluation
+TOP_K = 3  # For the comparison table
 
 # PRODUSE CANDIDATE (UPSHELL) – DEFINITE EXPLICIT
 CANDIDATES = [
@@ -235,6 +237,7 @@ for K in K_VALUES:
     hit_pop = hit_at_k_baseline(df_test, popular_top_k)
     print(f"K={K}:  Hit@{K} = {hit_pop:.2%}")
 
+
 print("=" * 50)
 
 # =========================
@@ -246,3 +249,60 @@ for bon_id, basket in df_test.groupby("id_bon"):
         print(f"\nExample ranking for basket {bon_id}:")
         print(ranking)
         break
+
+# =========================
+# REVENUE BASELINE
+# =========================
+def revenue_baseline(df_train, candidates, K):
+    """
+    Ranking baseline după venit total per produs.
+    Revenue(p) = suma SalePriceWithVAT pe TRAIN.
+    """
+    revenue = (
+        df_train[df_train["retail_product_name"].isin(candidates)]
+        .groupby("retail_product_name")["SalePriceWithVAT"]
+        .sum()
+        .to_dict()
+    )
+    # sort descending by income
+    ranked = sorted(revenue, key=revenue.get, reverse=True)
+    return ranked[:K]
+
+def hit_at_k_revenue_baseline(df_test, revenue_top_k, candidates):
+    """
+    Hit@K pentru baseline de revenue.
+    """
+    hits = 0
+    total = 0
+    for _, basket in df_test.groupby("id_bon"):
+        real_products = [
+            p for p in candidates
+            if p in basket["retail_product_name"].values
+        ]
+        for p in real_products:
+            hits += int(p in revenue_top_k)
+            total += 1
+    return hits / total if total > 0 else 0
+
+# =========================
+# REVENUE BASELINE EVALUATION & COMPARISON TABLE
+# =========================
+revenue_top_k = revenue_baseline(df_train, CANDIDATES, TOP_K)
+hit_revenue = hit_at_k_revenue_baseline(df_test, revenue_top_k, CANDIDATES)
+
+results_df = pd.DataFrame({
+    "Method": [
+        "Naive Bayes Ranking",
+        "Popularity Baseline",
+        "Revenue Baseline"
+    ],
+    f"Hit@{TOP_K}": [
+        hit_nb,
+        hit_pop,
+        hit_revenue
+    ]
+})
+
+print("\n========= RANKING COMPARISON =========")
+print(results_df.to_string(index=False, float_format=lambda x: f"{x:.2%}"))
+print("=====================================")
