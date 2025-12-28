@@ -10,6 +10,7 @@
 \usepackage{float}
 \usepackage{listings}
 \usepackage{xcolor}
+\usepackage{multirow}
 \usepackage[margin=2.5cm]{geometry}
 
 \lstset{
@@ -22,7 +23,7 @@
 
 \title{\textbf{Proiect Machine Learning}\\[0.5cm]
 \Large{Analiză Predictivă pentru Tranzacții Restaurant}}
-\author{Numele Studentului}
+\author{Nepotu Alexandra-Maria, Slănină Ștefan}
 \date{Decembrie 2025}
 
 \begin{document}
@@ -41,7 +42,7 @@ Acest proiect implementează algoritmi de machine learning pentru analiza datelo
     \item \textbf{Ranking}: Algoritm de ranking pentru upselling bazat pe Naive Bayes și valoare așteptată
 \end{enumerate}
 
-Toate algoritmele sunt implementate folosind Python, cu accent pe înțelegerea matematicii din spatele modelelor și pe implementarea custom a componentelor cheie.
+Toți algoritmii sunt implementați folosind Python, cu accent pe înțelegerea matematicii din spatele modelelor și pe implementarea custom a componentelor cheie.
 
 \section{Dataset și Preprocesare}
 
@@ -132,7 +133,7 @@ x_{ij} = \text{count}(\text{produs}_j \text{ în coș}_i)
 
 \subsubsection{Împărțirea Train/Test}
 
-\textbf{Crucial}: Împărțirea se face la nivel de \texttt{id\_bon}, nu la nivel de rânduri, pentru a preveni data leakage:
+    Împărțirea se face la nivel de \texttt{id\_bon}, nu la nivel de rânduri, pentru a preveni data leakage:
 
 \begin{equation}
 \text{Bonuri}_{\text{train}} \cup \text{Bonuri}_{\text{test}} = \text{Bonuri}_{\text{all}}, \quad \text{Bonuri}_{\text{train}} \cap \text{Bonuri}_{\text{test}} = \emptyset
@@ -379,7 +380,7 @@ Dat un coș parțial $\mathbf{x}_{\text{test}}$ (fără sosuri):
 
 \subsubsection{Hit@K}
 
-Hit@K măsoară câte ori sosul real din coș apare în Top-K recomandări:
+Hit@K măsoară de câte ori sosul real din coș apare în Top-K recomandări:
 
 \begin{equation}
 \text{Hit@K} = \frac{1}{N} \sum_{i=1}^{N} \mathbb{1}[\text{sos\_real}_i \in \text{TopK}_i]
@@ -413,7 +414,7 @@ Pentru comparație, implementăm un baseline care recomandă Top-K sosuri după 
 X_test_cache = {}
 for sauce in sauces:
     X_test_cache[sauce], _ = build_dataset_for_sauce(df_test, sauce)
-# Folosim X_test_cache[sauce] în recommend_top_k()
+# Use X_test_cache[sauce] inside recommend_top_k()
 \end{lstlisting}
 
 \textbf{Rezultat}: Reducere de la 10 minute la 10 secunde (60-100x speedup).
@@ -625,7 +626,7 @@ Am implementat clasa \texttt{BernoulliNaiveBayes} cu:
 Binarizăm features pentru Bernoulli NB:
 
 \begin{lstlisting}[language=Python]
-X_bin = (X > 0).astype(int)  # 1 dacă produsul apare, 0 altfel
+X_bin = (X > 0).astype(int)  # 1 if product is present, 0 otherwise
 \end{lstlisting}
 
 \subsection{Evaluare}
@@ -826,7 +827,7 @@ K=5 & 94.11\% & 92.18\% & 97.21\% & \textbf{97.43\%} & 93.54\% \\
 
 \subsubsection{Analiză și Interpretare}
 
-\paragraph{1. Decision Tree - Performerul Suprem}
+\paragraph{1. Decision Tree }
 
 Decision Tree obține cele mai bune rezultate (\textbf{89.78\%} medie) datorită:
 \begin{itemize}
@@ -842,7 +843,7 @@ IF "Crazy Schnitzel" > 0 AND "Cartofi" > 0 THEN
     P(Crazy Sauce | coș) = 0.85
 \end{verbatim}
 
-\paragraph{2. AdaBoost - Robust și Consistent}
+\paragraph{2. AdaBoost }
 
 AdaBoost atinge \textbf{97.43\% la K=5}, aproape perfect, datorită:
 \begin{itemize}
@@ -851,7 +852,7 @@ AdaBoost atinge \textbf{97.43\% la K=5}, aproape perfect, datorită:
     \item \textbf{Reducere variance}: Evită overfitting-ul Decision Trees individuale
 \end{itemize}
 
-\paragraph{3. Naive Bayes - Simplitate și Eficiență}
+\paragraph{3. Naive Bayes }
 
 NB custom obține \textbf{77.63\%} medie, validând implementarea proprie:
 \begin{itemize}
@@ -860,7 +861,7 @@ NB custom obține \textbf{77.63\%} medie, validând implementarea proprie:
     \item \textbf{Limitare}: Independența condițională ignoră interacțiuni între produse
 \end{itemize}
 
-\paragraph{4. k-NN - Curse of Dimensionality}
+\paragraph{4. k-NN }
 
 k-NN are performanță mai slabă (\textbf{72.81\%}) din cauza:
 \begin{itemize}
@@ -899,20 +900,6 @@ Popularity & Crazy Sauce, Cheddar Sauce, Garlic Sauce \\
 
 \subsubsection{Concluzie Comparație}
 
-\textbf{Pentru producție}:
-\begin{itemize}
-    \item \textbf{Decision Tree} - Acuratețe maximă și interpretabilitate
-    \item \textbf{AdaBoost} - Robustețe și performanță excelentă la K mare
-    \item \textbf{Naive Bayes} - Viteză și scalabilitate pentru volume mari
-\end{itemize}
-
-\textbf{Trade-offs}:
-\begin{itemize}
-    \item \textbf{Acuratețe vs Viteză}: Decision Tree > AdaBoost > NB > k-NN
-    \item \textbf{Interpretabilitate}: Decision Tree > NB > k-NN > AdaBoost
-    \item \textbf{Training Time}: NB < k-NN < Decision Tree < AdaBoost
-    \item \textbf{Prediction Time}: Decision Tree < NB < AdaBoost < k-NN
-\end{itemize}
 
 \textbf{Recomandare finală}: \textbf{Decision Tree sau AdaBoost} pentru sistemul de upselling în producție, datorită acurateții superioare și capacității de a captura relații complexe între produse.
 
@@ -969,7 +956,6 @@ LR \#2 (8 modele) & Precision@3 & 0.4236 \\
 \end{tabular}
 \end{table}
 
-\subsection{Învățăminte Cheie}
 
 \subsubsection{Implementare de la Zero}
 
@@ -1106,13 +1092,13 @@ Proiectul demonstrează implementarea cu succes a algoritmilor de machine learni
 
 Toate cerințele proiectului au fost îndeplinite:
 \begin{itemize}
-    \item ✓ Implementare custom a cel puțin unui algoritm (LR cu GD, Bernoulli NB)
-    \item ✓ Feature engineering corect (fără data leakage, excludere produs țintă)
-    \item ✓ Evaluare comprehensivă (Hit@K, Precision@K, ROC-AUC pentru clasificare, comparație baseline)
-    \item ✓ Comparație algoritmi de ranking (NB, k-NN, Decision Tree, AdaBoost)
-    \item ✓ Interpretare coeficienți și pattern-uri (top features, exemple concrete)
-    \item ✓ Optimizare performanță (feature caching, probability pre-computation)
-    \item ✓ Documentare comprehensivă (raport LaTeX, README, comentarii cod)
+    \item[$\checkmark$] Implementare custom a cel puțin unui algoritm (LR cu GD, Bernoulli NB)
+    \item[$\checkmark$] Feature engineering corect (fără data leakage, excludere produs țintă)
+    \item[$\checkmark$] Evaluare comprehensivă (Hit@K, Precision@K, ROC-AUC pentru clasificare, comparație baseline)
+    \item[$\checkmark$] Comparație algoritmi de ranking (NB, k-NN, Decision Tree, AdaBoost)
+    \item[$\checkmark$] Interpretare coeficienți și pattern-uri (top features, exemple concrete)
+    \item[$\checkmark$] Optimizare performanță (feature caching, probability pre-computation)
+    \item[$\checkmark$] Documentare comprehensivă (raport LaTeX, README, comentarii cod)
 \end{itemize}
 
 \textbf{Impact potențial}: Astfel de sisteme pot crește veniturile restaurantelor cu 10-20\% prin recomandări personalizate și strategii de upselling eficiente bazate pe machine learning.
@@ -1127,24 +1113,25 @@ Toate cerințele proiectului au fost îndeplinite:
 
 \subsection{Structura Proiectului}
 
-\begin{lstlisting}
+\begin{verbatim}
 ml-restaurant-sells/
-├── data/
-│   └── ap_dataset.csv
-├── output/
-│   ├── lr_crazy_sauce_results.png
-│   └── lr2_top_features_*.png
-├── src/
-│   ├── load_data.py
-│   ├── build_baskets.py
-│   ├── build_features.py
-│   ├── lr_crazy_sauce.py
-│   ├── lr_all_sauces.py
-│   └── nb_ranking.py
-├── requirements.txt
-├── README.md
-└── raport.pdf
-\end{lstlisting}
+|-- data/
+|   `-- ap_dataset.csv
+|-- output/
+|   |-- lr_crazy_sauce_results.png
+|   `-- lr2_top_features_*.png
+|-- src/
+|   |-- load_data.py
+|   |-- build_baskets.py
+|   |-- build_features.py
+|   |-- lr_crazy_sauce.py
+|   |-- lr_all_sauces.py
+|   `-- nb_ranking.py
+|-- requirements.txt
+|-- README.md
+`-- raport.pdf
+\end{verbatim}
+
 
 \subsection{Instrucțiuni de Rulare}
 
@@ -1181,6 +1168,6 @@ tqdm==4.67.1
 
 \section{Link GitHub}
 
-Repository-ul complet este disponibil la: \texttt{[inserați link-ul GitHub]}
+Repository-ul complet este disponibil la: \texttt{https://github.com/alexandranepotu/ml-restaurant-sells}
 
 \end{document}
